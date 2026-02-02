@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>外汇交易现金流 - 期限汇总</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        h1, h2 {
+            color: #333;
+            text-align: center;
+        }
+        .summary-section {
+            background-color: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        }
+        .pnl-positive {
+            color: #4caf50;
+        }
+        .pnl-negative {
+            color: #f44336;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background-color: white;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: right;
+        }
+        th {
+            background-color: #2196F3;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .horizon-section {
+            background-color: white;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            border-left: 4px solid #2196F3;
+        }
+        .horizon-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1976D2;
+            margin-bottom: 10px;
+        }
+        .fx-rates {
+            background-color: #fff3e0;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📈 外汇交易现金流 - 期限汇总</h1>
+    
+    <div class="summary-section">
+        <h2>📊 损益汇总 (P&L)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th style="text-align: center;">货币</th>
+                    <th style="text-align: center;">损益金额</th>
+                </tr>
+            </thead>
+            <tbody id="pnl-table">
+                <!-- PNL_DATA -->
+                <tr><td colspan="2" style="text-align: center;">暂无数据</td></tr>
+                <!-- PNL_DATA -->
+            </tbody>
+        </table>
+    </div>
+
+    <div class="fx-rates">
+        <h2>💱 即期汇率</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th style="text-align: center;">货币对</th>
+                    <th style="text-align: center;">汇率</th>
+                </tr>
+            </thead>
+            <tbody id="fx-table">
+                <!-- FX_RATES -->
+                <tr><td colspan="2" style="text-align: center;">暂无数据</td></tr>
+                <!-- FX_RATES -->
+            </tbody>
+        </table>
+    </div>
+
+    <div class="summary-section">
+        <h2>📅 期限分组现金流</h2>
+        
+        <div class="horizon-section">
+            <div class="horizon-title">今天</div>
+            <div id="today-cashflows">暂无现金流</div>
+        </div>
+        
+        <div class="horizon-section">
+            <div class="horizon-title">本周</div>
+            <div id="week-cashflows">暂无现金流</div>
+        </div>
+        
+        <div class="horizon-section">
+            <div class="horizon-title">本月</div>
+            <div id="month-cashflows">暂无现金流</div>
+        </div>
+        
+        <div class="horizon-section">
+            <div class="horizon-title">未来3个月</div>
+            <div id="quarter-cashflows">暂无现金流</div>
+        </div>
+        
+        <div class="horizon-section">
+            <div class="horizon-title">更远期</div>
+            <div id="beyond-cashflows">暂无现金流</div>
+        </div>
+    </div>
+
+    <script>
+        // 格式化金额
+        function formatAmount(amount) {
+            if (amount === null || amount === undefined) return '0.00';
+            return Number(amount).toLocaleString('zh-CN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+    </script>
+</body>
+</html>

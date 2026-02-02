@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>外汇交易现金流报告</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .summary {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: right;
+        }
+        th {
+            background-color: #2196F3;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .date-filter {
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .total-row {
+            font-weight: bold;
+            background-color: #e8f5e9 !important;
+        }
+    </style>
+</head>
+<body>
+    <h1>📊 外汇交易现金流报告</h1>
+    
+    <div class="summary">
+        <p><strong>生成时间:</strong> <span id="report-time"></span></p>
+        <p><strong>包含未来现金流:</strong> 显示今天及以后的所有现金流记录</p>
+    </div>
+
+    <div class="date-filter">
+        <label><input type="checkbox" id="show-past" onchange="togglePastCashflows()"> 显示历史现金流</label>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="text-align: center;">日期</th>
+                <th style="text-align: center;">货币</th>
+                <th style="text-align: center;">现金流</th>
+                <th style="text-align: center;">交易ID</th>
+                <th style="text-align: center;">类型</th>
+            </tr>
+        </thead>
+        <tbody id="cashflow-table">
+            <!-- DATA_START -->
+            <tr>
+                <td colspan="5" style="text-align: center;">正在加载数据...</td>
+            </tr>
+            <!-- DATA_END -->
+        </tbody>
+    </table>
+
+    <script>
+        // 设置生成时间
+        document.getElementById('report-time').textContent = new Date().toLocaleString('zh-CN');
+        
+        // 隐藏历史现金流
+        function togglePastCashflows() {
+            const showPast = document.getElementById('show-past').checked;
+            const rows = document.querySelectorAll('#cashflow-table tr');
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 3) {
+                    const dateStr = cells[0].textContent;
+                    if (dateStr && dateStr !== 'N/A') {
+                        const rowDate = new Date(dateStr);
+                        rowDate.setHours(0, 0, 0, 0);
+                        
+                        if (rowDate < today && !showPast) {
+                            row.style.display = 'none';
+                        } else {
+                            row.style.display = '';
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 页面加载后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            togglePastCashflows();
+        });
+    </script>
+</body>
+</html>

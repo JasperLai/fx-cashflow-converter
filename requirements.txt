@@ -1,0 +1,4 @@
+# fx-cashflow-converter
+外汇交易现金流转换工具
+
+Python 3.7+ (仅标准库，无外部依赖)
