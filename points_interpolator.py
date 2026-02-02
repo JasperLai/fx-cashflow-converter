@@ -94,7 +94,8 @@ class PointsInterpolator:
             current += timedelta(days=1)
         return days
     
-    def interpolate(self, pair: str, value_date: date, mat_date: date) -> Optional[Decimal]:
+    def interpolate(self, pair: str, value_date: date, mat_date: date, 
+                    current_date: Optional[date] = None) -> Optional[Decimal]:
         """
         插值计算远期点数
         
@@ -102,6 +103,7 @@ class PointsInterpolator:
             pair: 货币对
             value_date: 起息日
             mat_date: 到期日
+            current_date: 当前日期，默认为今天
             
         Returns:
             插值后的点数，失败返回 None
@@ -109,14 +111,25 @@ class PointsInterpolator:
         if pair not in self.points_data:
             return None
         
-        if not value_date or not mat_date:
+        if not mat_date:
             return None
         
-        if mat_date <= value_date:
+        # 使用今天作为当前日期（如果未指定）
+        if current_date is None:
+            current_date = date.today()
+        
+        # 如果当前日期已经超过起息日，使用当前日期计算剩余天数
+        # 如果当前日期还在起息日之前，使用起息日计算
+        if current_date < value_date:
+            calc_date = value_date
+        else:
+            calc_date = current_date
+        
+        if mat_date <= calc_date:
             return None
         
-        # 计算到期日相对于起息日的天数
-        target_days = self.get_business_days(value_date, mat_date)
+        # 计算从计算日期到到期日的营业日天数
+        target_days = self.get_business_days(calc_date, mat_date)
         
         points_list = self.points_data[pair]
         if not points_list:
