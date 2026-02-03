@@ -28,9 +28,12 @@ TENOR_DAYS = {
     '5M': 150,    # 5 Months
     '6M': 180,    # 6 Months
     '9M': 270,    # 9 Months
+    '15M': 450,   # 15 Months
+    '18M': 540,   # 18 Months
     '1Y': 365,    # 1 Year
     '2Y': 730,    # 2 Years
     '3Y': 1095,   # 3 Years
+    '4Y': 1460,   # 4 Years
     '5Y': 1825,   # 5 Years
 }
 
@@ -54,33 +57,46 @@ class PointsInterpolator:
                 if not line or line.startswith('#'):
                     continue
                 
-                # 检查是否是货币对标题行（不含逗号的行）
-                if ',' not in line:
-                    parts = line.split()
-                    if parts and len(parts[0].split('/')) == 2:
-                        current_pair = parts[0].strip()
+                # 分割行
+                parts = line.split(',')
+                
+                # 如果第一行只有一个字段，可能是货币对或列头
+                if len(parts) == 1:
+                    first_part = parts[0].strip()
+                    # 货币对格式：EURUSD 或 EUR/USD
+                    if first_part.isalpha() and len(first_part) >= 5:
+                        # 纯字母的货币对（如 EURUSD, USDJPY）
+                        current_pair = first_part
+                        if current_pair not in self.points_data:
+                            self.points_data[current_pair] = []
+                    elif '/' in first_part:
+                        # 带斜杠的货币对（如 EUR/USD）
+                        current_pair = first_part
                         if current_pair not in self.points_data:
                             self.points_data[current_pair] = []
                     continue
                 
+                # 如果第一个字段是 "Tenor"，跳过（这是列头行）
+                first_part = parts[0].strip()
+                if first_part == 'Tenor':
+                    continue
+                
                 # 数据行
-                if current_pair and ',' in line:
-                    parts = line.split(',')
-                    if len(parts) >= 4:
-                        tenor = parts[0].strip()
-                        try:
-                            bid_pts = Decimal(parts[2].strip())
-                            avg_pts = (bid_pts + Decimal(parts[3].strip())) / 2
-                            days = TENOR_DAYS.get(tenor, 0)
-                            
-                            self.points_data[current_pair].append({
-                                'tenor': tenor,
-                                'days': days,
-                                'bid_points': bid_pts,
-                                'avg_points': avg_pts
-                            })
-                        except (ValueError, IndexError):
-                            continue
+                if current_pair and len(parts) >= 4:
+                    tenor = parts[0].strip()
+                    try:
+                        bid_pts = Decimal(parts[2].strip())
+                        avg_pts = (bid_pts + Decimal(parts[3].strip())) / 2
+                        days = TENOR_DAYS.get(tenor, 0)
+                        
+                        self.points_data[current_pair].append({
+                            'tenor': tenor,
+                            'days': days,
+                            'bid_points': bid_pts,
+                            'avg_points': avg_pts
+                        })
+                    except (ValueError, IndexError):
+                        continue
         except FileNotFoundError:
             pass
     
@@ -152,7 +168,7 @@ class PointsInterpolator:
             
             if p1['days'] <= target_days <= p2['days']:
                 # 线性插值
-                ratio = (target_days - p1['days']) / (p2['days'] - p1['days'])
+                ratio = Decimal(target_days - p1['days']) / Decimal(p2['days'] - p1['days'])
                 interpolated = p1['avg_points'] + ratio * (p2['avg_points'] - p1['avg_points'])
                 return interpolated
         

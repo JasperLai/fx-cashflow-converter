@@ -57,6 +57,16 @@ def is_jpy_base(pair: str) -> bool:
     return base == 'JPY'
 
 
+def normalize_pair_for_points(pair: str) -> str:
+    """
+    标准化货币对格式，用于远期点报表查找
+    EUR/USD -> EURUSD
+    EURUSD -> EURUSD
+    """
+    base, quote = parse_pair(pair)
+    return base + quote
+
+
 def load_filter_config(config_path: Optional[str]) -> Dict:
     """加载过滤配置"""
     if not config_path:
@@ -101,10 +111,12 @@ def calculate_swap_cashflows(trade: Dict, points_interpolator: Optional[PointsIn
     base_ccy, quote_ccy = parse_pair(pair)
     near_rate = abs(amount2 / amount1)
     divisor = points_divisor_by_pair(pair)
+    normalized_pair = normalize_pair_for_points(pair)
     
     # 远端汇率计算
     if points_interpolator and mat_date:
-        curve_pts = points_interpolator.interpolate(pair, value_date, mat_date)
+        # 使用 Value Date 作为计算时点
+        curve_pts = points_interpolator.interpolate(normalized_pair, value_date, mat_date, current_date=value_date)
         if curve_pts is not None:
             far_rate = near_rate + (curve_pts / divisor)
         else:
@@ -225,10 +237,12 @@ def calculate_pnl(trade: Dict, points_interpolator: Optional[PointsInterpolator]
     
     _, quote_ccy = parse_pair(pair)
     divisor = points_divisor_by_pair(pair)
+    normalized_pair = normalize_pair_for_points(pair)
     
     pnl = Decimal('0')
     if points_interpolator:
-        curve_pts = points_interpolator.interpolate(pair, value_date, mat_date)
+        # 使用 Value Date 作为计算时点，确保已过期交易也能计算 P&L
+        curve_pts = points_interpolator.interpolate(normalized_pair, value_date, mat_date, current_date=value_date)
         if curve_pts is not None:
             pnl = -amount1 * (curve_pts - rate_price) / divisor
     
