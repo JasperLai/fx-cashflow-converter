@@ -259,8 +259,17 @@ def generate_csv(aggregated: Dict, output_file: str):
 def generate_html(cashflows: List[Dict], template_file: str, output_file: str):
     """生成现金流 HTML 报告"""
     today = datetime.date.today()
-    future_cashflows = [cf for cf in cashflows if cf['Date'] is None or cf['Date'] >= today]
-    future_cashflows.sort(key=lambda x: (x['Date'] or datetime.date.max, x['Currency']))
+    
+    # 先聚合现金流：按日期+货币汇总
+    aggregated = aggregate_cashflows(cashflows)
+    
+    # 转换为列表格式
+    aggregated_list = [
+        {'Date': date, 'Currency': ccy, 'Cashflow': amt}
+        for (date, ccy), amt in aggregated.items()
+        if date is None or date >= today
+    ]
+    aggregated_list.sort(key=lambda x: (x['Date'] or datetime.date.max, x['Currency']))
     
     html = []
     with open(template_file, 'r', encoding='utf-8') as f:
@@ -277,14 +286,14 @@ def generate_html(cashflows: List[Dict], template_file: str, output_file: str):
             break
     
     if data_start >= 0 and data_end > data_start:
-        # 生成数据行
+        # 生成数据行（使用聚合后的数据）
         data_rows = []
-        for cf in future_cashflows:
+        for cf in aggregated_list:
             date_str = cf['Date'].strftime('%Y-%m-%d') if cf['Date'] else 'N/A'
             cashflow_str = f"{cf['Cashflow']:,.2f}" if cf['Cashflow'] else '0.00'
             data_rows.append(
                 f'            <tr><td>{date_str}</td><td>{cf["Currency"]}</td>'
-                f'<td>{cashflow_str}</td><td>{cf["TradeId"]}</td><td>{cf["Type"]}</td></tr>'
+                f'<td>{cashflow_str}</td></tr>'
             )
         
         html[data_start+1:data_end] = ['\n'.join(data_rows) + '\n']
@@ -296,50 +305,67 @@ def generate_html(cashflows: List[Dict], template_file: str, output_file: str):
 def generate_horizon_summary_html(cashflows: List[Dict], pnl_data: Dict, 
                                   fx_rates: Dict, template_file: str, output_file: str):
     """生成期限汇总 HTML 报告"""
-    # 按期限分组现金流
+    # 按期限分组现金流（使用聚合后的数据）
     today = datetime.date.today()
+    
+    # 先聚合现金流
+    aggregated = aggregate_cashflows(cashflows)
+    
     horizons = {
-        'Today': {'cashflows': [], 'start': today, 'end': today},
-        'This Week': {'cashflows': [], 'start': today, 'end': today + datetime.timedelta(days=7-today.weekday())},
-        'This Month': {'cashflows': [], 'start': today, 'end': today.replace(day=28) + datetime.timedelta(days=4)},
-        'Next 3 Months': {'cashflows': [], 'start': today, 'end': today + datetime.timedelta(days=90)},
-        'Beyond': {'cashflows': [], 'start': today + datetime.timedelta(days=90), 'end': None}
+        'Today': [],
+        'This Week': [],
+        'This Month': [],
+        'Next 3 Months': [],
+        'Beyond': []
     }
     
-    for cf in cashflows:
-        if cf['Date'] is None:
-            horizons['Beyond']['cashflows'].append(cf)
-        elif cf['Date'] < today:
-            horizons['Today']['cashflows'].append(cf)
-        elif cf['Date'] < horizons['This Week']['end']:
-            horizons['This Week']['cashflows'].append(cf)
-        elif cf['Date'] < horizons['This Month']['end']:
-            horizons['This Month']['cashflows'].append(cf)
-        elif cf['Date'] < horizons['Next 3 Months']['end']:
-            horizons['Next 3 Months']['cashflows'].append(cf)
+    for (date, ccy), amt in aggregated.items():
+        cf = {'Date': date, 'Currency': ccy, 'Cashflow': amt}
+        if date is None:
+            horizons['Beyond'].append(cf)
+        elif date < today:
+            horizons['Today'].append(cf)
+        elif date < horizons['This Week'][0]['Date'] if horizons['This Week'] else False:
+            pass
+        elif date < today + datetime.timedelta(days=7-today.weekday()):
+            horizons['This Week'].append(cf)
+        elif date < today.replace(day=28) + datetime.timedelta(days=4):
+            horizons['This Month'].append(cf)
+        elif date < today + datetime.timedelta(days=90):
+            horizons['Next 3 Months'].append(cf)
         else:
-            horizons['Beyond']['cashflows'].append(cf)
+            horizons['Beyond'].append(cf)
     
     html = []
     with open(template_file, 'r', encoding='utf-8') as f:
         html = list(f)
     
-    # 替换 P&L 数据
+    # 替换 P&L 数据 - 查找 <tbody> 标签后的 PNL_DATA
+    in_pnl_tbody = False
     for i, line in enumerate(html):
-        if '<!-- PNL_DATA -->' in line:
+        if '<tbody id="pnl-table">' in line:
+            in_pnl_tbody = True
+        if in_pnl_tbody and '<!-- PNL_DATA -->' in line:
             pnl_lines = []
             for ccy, pnl in pnl_data.items():
                 pnl_str = f"{pnl:,.2f}" if pnl else '0.00'
                 pnl_lines.append(f'            <tr><td>{ccy}</td><td>{pnl_str}</td></tr>')
+            if not pnl_lines:
+                pnl_lines = ['            <tr><td colspan="2" style="text-align: center;">暂无数据</td></tr>']
             html[i+1:i+2] = ['\n'.join(pnl_lines) + '\n']
             break
     
-    # 替换 FX 汇率数据
+    # 替换 FX 汇率数据 - 查找 <tbody> 标签后的 FX_RATES
+    in_fx_tbody = False
     for i, line in enumerate(html):
-        if '<!-- FX_RATES -->' in line:
+        if '<tbody id="fx-table">' in line:
+            in_fx_tbody = True
+        if in_fx_tbody and '<!-- FX_RATES -->' in line:
             fx_lines = []
             for pair, rate in fx_rates.items():
                 fx_lines.append(f'            <tr><td>{pair}</td><td>{rate}</td></tr>')
+            if not fx_lines:
+                fx_lines = ['            <tr><td colspan="2" style="text-align: center;">暂无数据</td></tr>']
             html[i+1:i+2] = ['\n'.join(fx_lines) + '\n']
             break
     
