@@ -101,14 +101,8 @@ class PointsInterpolator:
             pass
     
     def get_business_days(self, start_date: date, end_date: date) -> int:
-        """计算两个日期之间的营业日天数（排除周末）"""
-        days = 0
-        current = start_date
-        while current < end_date:
-            if current.weekday() < 5:  # 0-4 是周一到周五
-                days += 1
-            current += timedelta(days=1)
-        return days
+        """计算两个日期之间的天数（自然日，不排除周末）"""
+        return (end_date - start_date).days
     
     def interpolate(self, pair: str, value_date: date, mat_date: date, 
                     current_date: Optional[date] = None) -> Optional[Decimal]:

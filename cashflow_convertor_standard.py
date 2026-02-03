@@ -240,11 +240,14 @@ def calculate_pnl(trade: Dict, points_interpolator: Optional[PointsInterpolator]
     normalized_pair = normalize_pair_for_points(pair)
     
     pnl = Decimal('0')
+    curve_pts = None
     if points_interpolator:
         # 使用 Value Date 作为计算时点，确保已过期交易也能计算 P&L
         curve_pts = points_interpolator.interpolate(normalized_pair, value_date, mat_date, current_date=value_date)
         if curve_pts is not None:
             pnl = -amount1 * (curve_pts - rate_price) / divisor
+    
+    print(f"[DEBUG] curve_pts: ({curve_pts}, {rate_price})")
     
     return {
         'Currency': quote_ccy,
@@ -452,7 +455,10 @@ def main():
     # 加载远期点插值器
     points_interpolator = None
     if args.points_csv:
+        print(f"[DEBUG] Loading points CSV: {args.points_csv}")
         points_interpolator = PointsInterpolator(args.points_csv)
+        print(f"[DEBUG] Points table loaded: {points_interpolator is not None}")
+        print(f"[DEBUG] Points table pairs: {list(points_interpolator.points_data.keys()) if points_interpolator else []}")
     
     # 加载交易记录
     trades = load_trades(args.input, ignore_folders, filter_config)
@@ -482,6 +488,8 @@ def main():
                 ccy = pnl['Currency']
                 all_pnl[ccy] = all_pnl.get(ccy, Decimal('0')) + pnl['P&L']
     
+    print(f"[DEBUG] P&L by currency: {all_pnl}")
+    
     # 聚合现金流
     aggregated = aggregate_cashflows(all_cashflows)
     
@@ -495,6 +503,7 @@ def main():
     
     # 提取即期汇率
     fx_rates = extract_spot_rates(args.points_csv)
+    print(f"[DEBUG] FX rates extracted: {fx_rates}")
     generate_horizon_summary_html(all_cashflows, all_pnl, fx_rates, 
                                   args.template_summary, str(out_html_summary_path))
     
